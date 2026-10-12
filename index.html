@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoVision — Waste Sorting Demo</title>
+<style>
+:root{--green:#16784f;--deep:#153b2c;--mint:#eaf6ee;--line:#d8e8dd;--muted:#62756a;--amber:#fff4d7;--amberline:#e9cf83}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--deep);background:#f5f9f6}
+header{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:18px max(20px,calc((100% - 1060px)/2));background:#fff;border-bottom:1px solid var(--line)}
+.brand{font-size:1.25rem;font-weight:800;color:var(--green)}.tag{font-size:.85rem;color:var(--muted)}
+main{max-width:1000px;margin:38px auto;padding:0 18px}
+.hero{text-align:center;margin-bottom:26px}.hero h1{font-size:clamp(2rem,5vw,3rem);margin:0 0 10px}.hero p{max-width:680px;line-height:1.65;color:var(--muted);margin:auto}
+.notice{max-width:800px;margin:22px auto;background:var(--amber);border:1px solid var(--amberline);border-radius:12px;padding:13px 16px;line-height:1.5;font-size:.94rem}
+.card{max-width:800px;margin:0 auto;background:white;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 12px 34px #173c2b0b}
+.drop{border:2px dashed #9bc7ad;background:#fbfefc;border-radius:16px;padding:24px;text-align:center}
+input[type=file]{display:block;max-width:100%;margin:15px auto}
+button{border:0;border-radius:10px;background:var(--green);color:#fff;padding:12px 18px;font-size:1rem;font-weight:700;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#e7f2eb;color:var(--deep);margin-left:8px}
+#preview{display:none;max-width:min(100%,300px);max-height:250px;object-fit:contain;border-radius:12px;margin:15px auto 0}
+.small{font-size:.9rem;color:var(--muted);line-height:1.5}.result{display:none;margin-top:20px;padding:18px;border-radius:14px;background:#f1f8f3;border:1px solid var(--line)}
+.pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#fff0cc;color:#795400;font-size:.78rem;font-weight:800;letter-spacing:.02em}
+.result h2{margin:10px 0 6px}.confidence{font-weight:800;color:var(--green);font-size:1.1rem}.caution{font-size:.9rem;color:var(--muted);line-height:1.5}
+.classes{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:22px 0 4px}.classes span{background:var(--mint);border-radius:99px;padding:7px 11px;font-size:.85rem}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:.83rem;line-height:1.6}
+@media(max-width:600px){header{align-items:flex-start;flex-direction:column}.card{padding:15px}.secondary{margin:8px 0 0}}
+</style>
+</head>
+<body>
+<header><div class="brand">♻ EcoVision</div><div class="tag">AI-Based Waste Classification & Recycling Assistant</div></header>
+<main>
+  <section class="hero">
+    <h1>Make waste sorting easier.</h1>
+    <p>Choose a waste photo and explore the EcoVision interface. This browser-only version demonstrates the user experience without running the trained AI model.</p>
+  </section>
+  <div class="notice"><strong>Demo mode — not a real AI prediction.</strong> The sample category and confidence shown below are illustrative only. This page does not analyze the contents of your photo, and its result must not be treated as a model output.</div>
+  <section class="card">
+    <div class="drop">
+      <h2 style="margin-top:0">Try the website demo</h2>
+      <p class="small">Upload an image to preview it. Then press “Show sample result” to see how a result card could look.</p>
+      <input id="imageInput" type="file" accept="image/*">
+      <img id="preview" alt="Preview of the image you selected">
+      <div style="margin-top:12px">
+        <button id="sampleBtn" disabled>Show sample result</button>
+        <button id="resetBtn" class="secondary" type="button">Reset</button>
+      </div>
+      <p id="status" class="small" role="status">No image selected yet.</p>
+    </div>
+    <div id="result" class="result" aria-live="polite">
+      <span class="pill">ILLUSTRATIVE SAMPLE · NOT AI</span>
+      <h2>Example category: Plastic</h2>
+      <p class="confidence">Example confidence: 92%</p>
+      <p class="caution">This is a hard-coded sample for demonstrating the interface. It was not calculated from your image and does not come from your trained EcoVision model.</p>
+      <p><strong>Example disposal reminder:</strong> Check the item and your local recycling rules. Rinse recyclable containers when appropriate and keep non-recyclable waste separate.</p>
+    </div>
+    <div class="classes" aria-label="Target categories of the trained model">
+      <span>Cardboard</span><span>Glass</span><span>Metal</span><span>Paper</span><span>Plastic</span><span>Trash</span>
+    </div>
+    <p class="small" style="text-align:center;margin-bottom:0">Target classes of the separate trained model: cardboard, glass, metal, paper, plastic, trash.</p>
+  </section>
+</main>
+<footer>EcoVision student project · SDG 12: Responsible Consumption and Production<br>Browser-only demonstration. Real classification requires connecting the trained model to an inference service.</footer>
+<script>
+const input=document.getElementById('imageInput');
+const preview=document.getElementById('preview');
+const sampleBtn=document.getElementById('sampleBtn');
+const resetBtn=document.getElementById('resetBtn');
+const status=document.getElementById('status');
+const result=document.getElementById('result');
+let currentObjectUrl=null;
+input.addEventListener('change',()=>{
+  result.style.display='none';
+  const file=input.files && input.files[0];
+  if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null;}
+  if(!file){preview.style.display='none';sampleBtn.disabled=true;status.textContent='No image selected yet.';return;}
+  if(!file.type.startsWith('image/')){input.value='';preview.style.display='none';sampleBtn.disabled=true;status.textContent='Please choose an image file.';return;}
+  currentObjectUrl=URL.createObjectURL(file);
+  preview.src=currentObjectUrl;preview.style.display='block';
+  sampleBtn.disabled=false;
+  status.textContent='Image preview ready. The sample result will not analyze this image.';
+});
+sampleBtn.addEventListener('click',()=>{
+  if(!input.files || !input.files[0]) return;
+  result.style.display='block';
+  status.textContent='Displayed an illustrative sample only — no AI inference was performed.';
+});
+resetBtn.addEventListener('click',()=>{
+  input.value='';result.style.display='none';preview.style.display='none';sampleBtn.disabled=true;
+  if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null;}
+  status.textContent='No image selected yet.';
+});
+</script>
+</body>
+</html>
